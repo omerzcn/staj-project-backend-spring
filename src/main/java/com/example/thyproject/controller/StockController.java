@@ -6,6 +6,9 @@ import com.example.thyproject.dto.StockDTO;
 import com.example.thyproject.service.ApiService;
 import com.example.thyproject.service.PurchaseHistoryService;
 import com.example.thyproject.service.StockService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,8 +38,10 @@ public class StockController {
     }
 
     @GetMapping("/stocks1")
-    public ResponseEntity<List<ApiDataDTO>> getTrendStocks1() {
-        List<ApiDataDTO> responseData = apiService.getStockDataList();
+    public ResponseEntity<Page<ApiDataDTO>> getTrendStocks1(@RequestParam(defaultValue = "0") int page,
+                                                            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ApiDataDTO> responseData = apiService.getStockDataList(pageable);
         return ResponseEntity.ok(responseData);
     }
 

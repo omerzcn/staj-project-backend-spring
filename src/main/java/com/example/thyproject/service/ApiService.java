@@ -10,18 +10,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.thyproject.dto.Converter.ApiDataConvertToDTO;
-import static com.example.thyproject.dto.Converter.ApiDataDTOConvertToAD;
+import com.example.thyproject.dto.Converter;
+
 
 
 @Service
@@ -56,21 +59,18 @@ public class ApiService {
         this.apiDataRepo = apiDataRepo;
     }
 
-    public List<ApiDataDTO> getStockDataList() {
+    public Page<ApiDataDTO> getStockDataList(Pageable pageable) {
         try {
-            List<ApiDataDTO> apiDataDTOList = new ArrayList<>();
+            Page<ApiData> apiDataPage = apiDataRepo.findAll(pageable);
 
-            for (ApiData apiData: apiDataRepo.findAll()){
-                apiDataDTOList.add(ApiDataConvertToDTO(apiData));
-            }
-
-            return apiDataDTOList;
+            return apiDataPage.map(Converter::ApiDataConvertToDTO);
 
         } catch (Exception e) {
             return null;
         }
     }
-    
+
+    //price değişkenini %5 oranında değişiklik yapıyorum.
     @Scheduled(cron = "0/10 * * * * *")
     public void updatePriceValue() {
         try {
@@ -79,7 +79,7 @@ public class ApiService {
             if(!apiDataList.isEmpty()){
                 for (ApiData apiData : apiDataList) {
 
-                    BigDecimal originalPrice = apiData.getPrice()!= null ? apiData.getPrice() : BigDecimal.ZERO;;
+                    BigDecimal originalPrice = apiData.getPrice()!= null ? apiData.getPrice() : BigDecimal.ZERO;
 
                     double randomChangePercentage = (Math.random() * 0.1) - 0.05;
 
@@ -97,6 +97,7 @@ public class ApiService {
         }
     }
 
+    //verileri apiden alıp veritabanına kaydediyorum.
     @Scheduled(fixedRate = 300000)
     public void getStocks() {
         apiDataRepo.deleteAllInBatch();
@@ -139,7 +140,7 @@ public class ApiService {
             List<ApiDataDTO> apiDataDTOList = objectMapper.readValue(data, new TypeReference<List<ApiDataDTO>>() {});
 
             for (ApiDataDTO api: apiDataDTOList){
-                ApiData apiData = ApiDataDTOConvertToAD(api);
+                ApiData apiData = Converter.ApiDataDTOConvertToAD(api);
                 apiDataRepo.save(apiData);
             }
         } catch (JsonProcessingException e) {
