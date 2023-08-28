@@ -1,9 +1,13 @@
 package com.example.thyproject.service;
 
+import com.example.thyproject.dto.ApiDataDTO;
+import com.example.thyproject.entity.ApiData;
+import com.example.thyproject.repository.ApiDataRepo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -12,9 +16,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+
+import static com.example.thyproject.dto.Converter.ApiDataConvertToDTO;
+import static com.example.thyproject.dto.Converter.ApiDataDTOConvertToAD;
 
 
 @Service
@@ -28,7 +35,7 @@ public class ApiService {
     private final WebClient api2WebClient;
     private final WebClient api3WebClient;
 
-    private volatile String stockDataList; // Verileri saklamak için bir liste
+    private final ApiDataRepo apiDataRepo;
 
 
     public ApiService(@Value("${rapidapi.host}") String rapidApiHost,
@@ -37,7 +44,7 @@ public class ApiService {
                       @Value("${api.key2}") String apiKey2,
                       @Qualifier("api1WebClient") WebClient api1WebClient,
                       @Qualifier("api2WebClient") WebClient api2WebClient,
-                      @Qualifier("api3WebClient") WebClient api3WebClient) {
+                      @Qualifier("api3WebClient") WebClient api3WebClient, ApiDataRepo apiDataRepo) {
 
         this.api1WebClient = api1WebClient;
         this.api2WebClient = api2WebClient;
@@ -46,39 +53,45 @@ public class ApiService {
         this.apiHost2 = apiHost2;
         this.apiKey2 = apiKey2;
         this.api3WebClient = api3WebClient;
+        this.apiDataRepo = apiDataRepo;
     }
 
-    public String getStockDataList() {
+    public List<ApiDataDTO> getStockDataList() {
         try {
-            return stockDataList;
+            List<ApiDataDTO> apiDataDTOList = new ArrayList<>();
+
+            for (ApiData apiData: apiDataRepo.findAll()){
+                apiDataDTOList.add(ApiDataConvertToDTO(apiData));
+            }
+
+            return apiDataDTOList;
+
         } catch (Exception e) {
-            return "An error occurred while fetching stock data" + e.getMessage();
+            return null;
         }
     }
     
     @Scheduled(cron = "0/10 * * * * *")
-    public void updateStockDataList() {
+    public void updatePriceValue() {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode stockNodes = objectMapper.readTree(stockDataList != null ? stockDataList : "[]"); // Veri yoksa boş liste ile devam et
+            List<ApiData> apiDataList = apiDataRepo.findAll();
 
-            ArrayNode newStockNodes = objectMapper.createArrayNode();
+            if(!apiDataList.isEmpty()){
+                for (ApiData apiData : apiDataList) {
 
-            for (JsonNode stockNode : stockNodes) {
-                ObjectNode modifiedStockInfoNode = (ObjectNode) stockNode;
+                    BigDecimal originalPrice = apiData.getPrice()!= null ? apiData.getPrice() : BigDecimal.ZERO;;
 
-                double originalPrice = stockNode.get("price").asDouble();
+                    double randomChangePercentage = (Math.random() * 0.1) - 0.05;
 
-                double randomChangePercentage = Math.random() * 0.1 - 0.05;
+                    BigDecimal priceChangeAmount = originalPrice.multiply(BigDecimal.valueOf(randomChangePercentage));
 
-                double newPrice = originalPrice * (1 + randomChangePercentage);
+                    BigDecimal newPrice = originalPrice.add(priceChangeAmount);
 
-                modifiedStockInfoNode.put("price", newPrice);
+                    apiData.setPrice(newPrice);
 
-                newStockNodes.add(modifiedStockInfoNode);
+                    apiDataRepo.save(apiData);
+                }
             }
-
-            stockDataList = objectMapper.writeValueAsString(newStockNodes);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -86,6 +99,8 @@ public class ApiService {
 
     @Scheduled(fixedRate = 300000)
     public void getStocks() {
+        apiDataRepo.deleteAllInBatch();
+        String data;
         try {
             String symbolsJson = api2WebClient.get()
                     .uri("https://financialmodelingprep.com/api/v3/search?query=AA&limit=200&exchange=NASDAQ&apikey=" + apiKey2)
@@ -104,18 +119,37 @@ public class ApiService {
 
             String symbolsStr = String.join(",", symbolsList);
 
-            stockDataList=  api2WebClient.get()
+            data =  api2WebClient.get()
                     .uri(apiHost2+"/api/v3/quote/"+symbolsStr+"?apikey="+apiKey2)
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
 
+            saveApiData(data);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    public void saveApiData(String data) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<ApiDataDTO> apiDataDTOList = objectMapper.readValue(data, new TypeReference<List<ApiDataDTO>>() {});
+
+            for (ApiDataDTO api: apiDataDTOList){
+                ApiData apiData = ApiDataDTOConvertToAD(api);
+                apiDataRepo.save(apiData);
+            }
+        } catch (JsonProcessingException e) {
+            // JSON verileri dönüştürme hatası
+            e.printStackTrace();
+        }
+    }
+
+
+    //yedek api'ler
     public String getStockData() {
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-RapidAPI-Host", rapidApiHost);

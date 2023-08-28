@@ -1,4 +1,5 @@
 package com.example.thyproject.controller;
+import com.example.thyproject.dto.ApiDataDTO;
 import com.example.thyproject.dto.PurchaseHistoryDTO;
 import com.example.thyproject.dto.SaleStockDTO;
 import com.example.thyproject.dto.StockDTO;
@@ -34,8 +35,8 @@ public class StockController {
     }
 
     @GetMapping("/stocks1")
-    public ResponseEntity<String> getTrendStocks1() {
-        String responseData = apiService.getStockDataList();
+    public ResponseEntity<List<ApiDataDTO>> getTrendStocks1() {
+        List<ApiDataDTO> responseData = apiService.getStockDataList();
         return ResponseEntity.ok(responseData);
     }
 
