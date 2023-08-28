@@ -33,7 +33,7 @@ public class StockController {
         return ResponseEntity.ok(responseData);
     }
 
-    @GetMapping(path = "/stocks1")
+    @GetMapping("/stocks1")
     public ResponseEntity<String> getTrendStocks1() {
         String responseData = apiService.getStockDataList();
         return ResponseEntity.ok(responseData);

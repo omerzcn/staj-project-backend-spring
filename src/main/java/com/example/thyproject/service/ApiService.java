@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -83,7 +84,7 @@ public class ApiService {
         }
     }
 
-    @Scheduled(cron = "0 */5 * * * *")
+    @Scheduled(fixedRate = 300000)
     public void getStocks() {
         try {
             String symbolsJson = api2WebClient.get()
@@ -115,7 +116,6 @@ public class ApiService {
         }
     }
 
-
     public String getStockData() {
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-RapidAPI-Host", rapidApiHost);
@@ -134,6 +134,7 @@ public class ApiService {
             return "An error occurred while fetching stock data"+e.getMessage();
         }
     }
+
     public String getRTApi(){
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-RapidAPI-Host", "real-time-finance-data.p.rapidapi.com");
