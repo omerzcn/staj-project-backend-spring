@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -59,8 +61,11 @@ public class ApiService {
         this.apiDataRepo = apiDataRepo;
     }
 
-    public Page<ApiDataDTO> getStockDataList(Pageable pageable) {
+    public Page<ApiDataDTO> getStockDataList(int page, int size, String sortProperty, String sortDirect) {
         try {
+
+            Pageable pageable = PageRequest.of(page, size, Sort.Direction.valueOf(sortDirect), sortProperty);
+
             Page<ApiData> apiDataPage = apiDataRepo.findAll(pageable);
 
             return apiDataPage.map(Converter::ApiDataConvertToDTO);

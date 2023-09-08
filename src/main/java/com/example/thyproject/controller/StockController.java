@@ -9,6 +9,7 @@ import com.example.thyproject.service.StockService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,9 +40,11 @@ public class StockController {
 
     @GetMapping("/stocks1")
     public ResponseEntity<Page<ApiDataDTO>> getTrendStocks1(@RequestParam(defaultValue = "0") int page,
-                                                            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ApiDataDTO> responseData = apiService.getStockDataList(pageable);
+                                                            @RequestParam(defaultValue = "10") int size,
+                                                            @RequestParam(defaultValue = "volume") String sort,
+                                                            @RequestParam(defaultValue = "ASC") String sortDirect) {
+
+        Page<ApiDataDTO> responseData = apiService.getStockDataList(page,size,sort,sortDirect);
         return ResponseEntity.ok(responseData);
     }
 
