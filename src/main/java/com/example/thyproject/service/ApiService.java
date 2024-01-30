@@ -178,7 +178,7 @@ public class ApiService {
     public String getRTApi(){
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-RapidAPI-Host", "real-time-finance-data.p.rapidapi.com");
-        headers.add("X-RapidAPI-Key", "ee4694b46amsh98ecf5e36743db2p1bcf98jsnb8379604eddb");
+        headers.add("X-RapidAPI-Key", "d14b0fc83bmsh32ec17a07cb372ep118d3ajsn1e1d9e3c9490");
         try{
             return  api3WebClient.get()
                     .uri("https://real-time-finance-data.p.rapidapi.com/market-trends?trend_type=MOST_ACTIVE")
